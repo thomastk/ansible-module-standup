@@ -47,7 +47,6 @@ notes:
     - If the check command fails or the output doesn't get validated, an optional heal step can be run.
     - The state of host is verified again if healing step is run.
 requirements: ['yaml']
-'''
 
 EXAMPLES = '''
 # Run all the checks specified in a test suite.
