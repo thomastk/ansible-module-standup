@@ -1,0 +1,37 @@
+#Use _REGISTER.var syntax to use results from previous executions of commands.
+---
+title: Test suite for verifying standup module
+checks:
+   -  name: "Test common 1"
+      description: Check if the OS is Ubuntu
+      command: uname -a | grep -i ubuntu
+
+   -  name: "Test web 1"
+      description: Check if Apache service is running
+      roles: web
+      command: sudo service apache2 status | grep -v "not running"
+      heal: sudo service apache2 start
+
+   -  name: "Test web 2"
+      description: Check if there is any Apache activity
+      roles: web
+      command: ls /var/log/apache2/access.log
+
+   -  name: "Test db 1"
+      description: Check if mysql service is running
+      roles: db
+#     command: sudo service mysql status | grep running
+      command: ps -ef |grep mysql|wc -l
+      heal: sudo service mysql start
+      output_compare:
+         type: number
+         value: 3
+         operator: EQ
+
+   -  name: "Test web 3"
+      description: Verify if there are more than 2 Apache processes running
+      command: ps -ef | grep apache2 | grep -v color | wc -l
+      output_compare:
+         type: number
+         value: 2
+         operator: GT
