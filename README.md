@@ -67,6 +67,64 @@ EXAMPLES = '''
     roles: mysql,web
     heal_state: true
 ```
+# Checks File
+
+The checks that are executed and evaluated by standup module are specified in a YAML file. Multiple checks can be present in a checks file and each check can be tagged with one or more role name so the roles in a file can be executed selectively by indicating the roles to be covered as one of the module parameters.
+
+A sample checks file below:
+```
+#CentOS smoke checks for standup module.
+---
+title: Test suite for verifying standup module on CentOS.
+checks:
+   -  name: "Test common 1"
+      description: Check if the OS is CentOS
+      command: cat /etc/os-release |grep ^NAME|grep CentOS
+
+   -  name: "Test web 1"
+      description: Check if Apache service is running
+      roles: web
+      command: sudo service httpd status | grep -v "not running"
+      heal: sudo service httpd start
+
+   -  name: "Test web 2"
+      description: Check if there is any Apache activity
+      roles: web
+      command: ls /var/log/httpd/access_log 
+
+   -  name: "Test db 1"
+      description: Check if mysql service is running
+      roles: db
+      command: ps -ef |grep mariadb|wc -l
+      heal: sudo service mariadb start
+      output_compare:
+         type: number
+         value: 3
+         operator: EQ
+
+   -  name: "Test web 3"
+      description: Verify if there are more than 2 Apache processes running
+      command: ps -ef | grep httpd | grep -v color | wc -l
+      output_compare:
+         type: number
+         value: 2
+         operator: GT
+```
+A check has the following attributes and options:
+
+- name - A label for the check. Required.
+- description - A short description for the check. Required.
+- roles - One or more tags to indicate the role of infrastructure, delimited by comma. Optional.
+- command - The command to run on the target host and the check status is determined based on its result, both OS system status ($? == 0) and optionally the output. Required.
+- ignore_status - The system result executing check command is ignored and will be considered success. Default: false.
+- heal - If heal action is specified as one of the module options (heal_state=true), this command will be run to heal a state if the check command fails. If heal command succeeds, the check command runs again. Optional.
+- output_compare - Output of check command is evaluated as below, optionally:
+   - type - str or number, indicating string comparison or numeric comparison of the output.
+   - value - The reference value with which the output should be compared.
+   - operator - One of the following: GE, EQ, GT, LE and LT. Only EQ is supported for "str" type, all operators are supported for "number" type.
+
+An Ansible task that uses standup module is marked successful if all the checks executed from the input checks file are run successfully.
+
 # Getting Started for Development
 
 # Testing a New Version 
