@@ -57,7 +57,7 @@ options:
         choices: [true, false]
         default: true
 notes:
-    - Tested on Mac, Ubuntu, RHEL and CentOS.
+    - Tested on Mac, Ubuntu and CentOS.
     - Run checks specified in an input file depending on the roles specified.
     - If the check command fails or the output doesn't get validated, an optional heal step can be run.
     - The state of host is verified again if healing step is run.
@@ -70,33 +70,30 @@ EXAMPLES = '''
   standup:
     checks_file_path: verify-app-cluster.yml
     
-# Run only checks related to mysql and web from verify-app-cluster.yml
+# Run only checks related to db and web from verify-app-cluster.yml
 - name: Run all the checks in verify-app-cluster.yml
   standup:
     checks_file_path: verify-app-cluster.yml
-    roles: mysql,web
+    roles: db,web
     
-# Run only checks related to mysql and web from verify-app-cluster.yml and take corrective action if needed.
+# Run only checks related to db and web from verify-app-cluster.yml and take corrective action if needed.
 - name: Run all the checks in verify-app-cluster.yml and heal state if needed
   standup:
     checks_file_path: verify-app-cluster.yml
-    roles: mysql,web
+    roles: db,web
     heal_state: true
 '''
 
 RETURN = '''
-checks_output:
-    description: The checks with status of command execution.
+checks:
+    description: The checks with status of check command, and if applicable heal command, executions.
     type: json
-validation_status:
-    description: Status of validation run.
+changed:
+    description: Indicates if any heal steps are successfully run.
     type: bool
-validation_msg:
+result:
     description: Note regarding the validation run.
     type: str
-heal_steps:
-    description: The commands ran to heal the state.
-    type: list
 '''
 
 from ansible.module_utils.basic import AnsibleModule

@@ -54,17 +54,17 @@ EXAMPLES = '''
   standup:
     checks_file_path: verify-app-cluster.yml
     
-# Run only checks related to mysql and web from verify-app-cluster.yml
+# Run only checks related to db and web from verify-app-cluster.yml
 - name: Run all the checks in verify-app-cluster.yml
   standup:
     checks_file_path: verify-app-cluster.yml
-    roles: mysql,web
+    roles: db,web
     
-# Run only checks related to mysql and web from verify-app-cluster.yml and take corrective action if needed.
+# Run only checks related to db and web from verify-app-cluster.yml and take corrective action if needed.
 - name: Run all the checks in verify-app-cluster.yml and heal state if needed
   standup:
     checks_file_path: verify-app-cluster.yml
-    roles: mysql,web
+    roles: db,web
     heal_state: true
 ```
 # Checks File

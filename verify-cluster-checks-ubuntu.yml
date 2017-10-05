@@ -20,13 +20,12 @@ checks:
    -  name: "Test db 1"
       description: Check if mysql service is running
       roles: db
-#     command: sudo service mysql status | grep running
       command: ps -ef |grep mysql|wc -l
       heal: sudo service mysql start
       output_compare:
          type: number
-         value: 3
-         operator: EQ
+         value: 2
+         operator: GT
 
    -  name: "Test web 3"
       description: Verify if there are more than 2 Apache processes running
