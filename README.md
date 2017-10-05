@@ -127,4 +127,14 @@ An Ansible task that uses standup module is marked successful if all the checks 
 
 # Getting Started for Development
 
+Generally follow the steps available at http://docs.ansible.com/ansible/latest/dev_guide/developing_modules_general.html for development and basic testing.
+
 # Testing a New Version 
+
+After the basic tests are passed in the Python development environment, the module must be smoked-tested against Ubuntu and CentOS targets. 
+
+- Clone this repo to your local environment where Ansible is installed.
+- Execute the test playbook against Ubuntu and CentOS targets as in the following example:
+```
+$ ansible-playbook standup-test.yml -i host-centos,host-ubuntu,
+```
