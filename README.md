@@ -136,5 +136,6 @@ After the basic tests are passed in the Python development environment, the modu
 - Clone this repo to your local environment where Ansible is installed.
 - Execute the test playbook against Ubuntu and CentOS targets as in the following example:
 ```
-$ ansible-playbook standup-test.yml -i host-centos,host-ubuntu,
+$ ansible-playbook standup-test.yml -i host-centos,host-ubuntu, [-u REMOTE_USER -k] [-K]
 ```
+The actual commandline would depend on how your SSH access is configured on the remote system, and, whether or not the REMOTE_USER has to provide sudo password.
