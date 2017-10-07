@@ -16,23 +16,26 @@
 # along with this software.  If not, see <http://www.gnu.org/licenses/>.
 
 ANSIBLE_METADATA = {
-    'metadata_version': '0.9',
+    'metadata_version': '1.1',
     'status': ['preview'],
     'supported_by': 'community'
 }
 
 DOCUMENTATION = '''
 ---
-author: "Thomas K. Theakanath (thomastk@"
+author: "Thomas Kurian Theakanath (thomastk@)"
 module: standup
 short_description: Runs a suite of checks to validate a host and heals state if needed.
 description:
-    - "The standup moudle runs a set of commands and evaluate the output to determine if a host stands up right. The tests can be specified in YAML format. A check contains a command that is supported on the host and directives to evaluate its output. An optional command to heal a state can also be specified with every check."
-version_added: "2.3"
+    - The standup module runs a set of checks and evaluate the results to determine if a host stands up right. The checks are specified in YAML format. 
+      A check contains a command that can be run on the host being verified, and, directives to evaluate the command output. Optionally, another command 
+      can be specified with a check to heal the state that the check verifies and it is run if the check fails.
+version_added: "2.4"
 options:
     checks_file_path:
         description:
-            - Path to the YAML file in which the checks are defined.
+            - Path to the YAML file in which the checks are defined. For format of checks YAML file and syntax of check refer 
+              U(https://github.com/thomastk/ansible-module-standup/blob/master/README.md)
         required: true
     checks_format:
         description:
@@ -42,54 +45,65 @@ options:
         default: yaml
     roles:
         description:
-            - Host roles against which the validation has to be executed. If roles are specified, only the compatible checks from checks_file_path will be used for validation.
+            - A role is a tag that indicates the application role of a host and a check can be tagged using those. If roles are specified, only matching 
+              roles from checks_file_path are executed by the module.
         required: false
     heal_state:
         description:
-            - Indicates that heal action be performed if a check fails. The command to heal broken state must be available.
+            - Indicates that heal command, if that is specified, be run if a check fails. 
         required: false
         choices: [true, false]
         default: false
     continue_on_failure:
         description:
-            - Indicates that the validation process continues in the event a check fails. A check status can be ignored at the check level also.
+            - Indicates that the validation process will continue if a check fails. A check status can be ignored at the check level also.
         required: false
         choices: [true, false]
         default: true
 notes:
     - Tested on Mac, Ubuntu and CentOS.
-    - Run checks specified in an input file depending on the roles specified.
-    - If the check command fails or the output doesn't get validated, an optional heal step can be run.
-    - The state of host is verified again if healing step is run.
 requirements: ['yaml']
 '''
 
 EXAMPLES = '''
-# Run all the checks specified in a test suite.
+# Run all the checks specified in a checks file.
 - name: Run all the checks in verify-app-cluster.yml
   standup:
     checks_file_path: verify-app-cluster.yml
-    
-# Run only checks related to db and web from verify-app-cluster.yml
+
+# Run only checks that are tagged with roles db and web from verify-app-cluster.yml
 - name: Run all the checks in verify-app-cluster.yml
   standup:
     checks_file_path: verify-app-cluster.yml
     roles: db,web
-    
-# Run only checks related to db and web from verify-app-cluster.yml and take corrective action if needed.
-- name: Run all the checks in verify-app-cluster.yml and heal state if needed
+
+# Run only checks that are tagged with roles db and web from verify-app-cluster.yml and 
+# run heal command, check status fails.
+- name: Run all the checks in verify-app-cluster.yml and run heal command, if needed
   standup:
     checks_file_path: verify-app-cluster.yml
     roles: db,web
     heal_state: true
+
+# A sample check. Multiple checks can be specified in a checks file. 
+# Refer U(https://github.com/thomastk/ansible-module-standup/blob/master/README.md) for complete documentation of checks YAML file syntax.
+-  name: "Test db 1"
+      description: Check if mysql service is running
+      roles: db
+      command: ps -ef |grep mariadb|wc -l
+      heal: sudo service mariadb start
+      output_compare:
+         type: number
+         value: 3
+         operator: EQ
 '''
 
 RETURN = '''
 checks:
-    description: The checks with status of check command, and if applicable heal command, executions.
+    description: The checks with results of running check and heal commands.
     type: json
 changed:
-    description: Indicates if any heal steps are successfully run.
+    description: Indicates if any heal steps are run successfully.
     type: bool
 result:
     description: Note regarding the validation run.
@@ -99,13 +113,13 @@ result:
 from ansible.module_utils.basic import AnsibleModule
 import os
 import re
-import commands
+import subprocess
 
 try:
     import yaml
-    HAVE_YAML=True
+    HAS_YAML=True
 except:
-    HAVE_YAML=False
+    HAS_YAML=False
 
 global module
 
@@ -280,7 +294,7 @@ class StandupCheck:
     #Executes the main command of check
     def execCommand(self):
         self.cmd_output = dict()
-        status,output=commands.getstatusoutput(self.command)
+        status,output=StandupCheck.getstatusoutput(self.command)
         self.cmd_output['sys_status'] = status
         self.cmd_output['output'] = output
 
@@ -289,7 +303,7 @@ class StandupCheck:
     #Executes the heal step specified in check, which also involves rerunning check command
     def execHeal(self):
         self.heal_output=dict()
-        status, output = commands.getstatusoutput(self.heal)
+        status, output = StandupCheck.getstatusoutput(self.heal)
         self.heal_output['sys_status']=status
         self.heal_output['output'] = output
 
@@ -325,6 +339,19 @@ class StandupCheck:
                         return False
 
         return self.check_status
+
+    @staticmethod
+    def getstatusoutput(cmd):
+        try:
+            output = subprocess.check_output(cmd, shell=True, universal_newlines=True, stderr=subprocess.STDOUT)
+            status = 0
+        except subprocess.CalledProcessError as ex:
+            output = ex.output
+            status = ex.returncode
+        if output[-1:] == '\n':
+            output = output[:-1]
+
+        return status, output
 
 class Standup:
 
@@ -488,7 +515,7 @@ def run_module():
     standup.setHealState(module.params['heal_state'])
 
     #Check if yaml module is installed
-    if not HAVE_YAML:
+    if not HAS_YAML:
         standup.markFailed()
         standup.exit('Python module yaml is needed on the target hosts for standup to work.')
 
